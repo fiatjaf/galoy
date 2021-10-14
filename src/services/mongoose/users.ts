@@ -6,6 +6,7 @@ import {
   CouldNotFindUserFromIdError,
   CouldNotFindUserFromUsernameError,
   CouldNotFindUserFromWalletIdError,
+  CouldNotFindUserFromRoleError,
 } from "@domain/errors"
 import { User } from "@services/mongoose/schema"
 import { onboardingEarn } from "@config/app"
@@ -57,6 +58,19 @@ export const UsersRepository = (): IUsersRepository => {
     }
   }
 
+  const findByRole = async (role: UserRole): Promise<User | RepositoryError> => {
+    try {
+      const result = await User.findOne({ role })
+      if (!result) {
+        return new CouldNotFindUserFromRoleError(role)
+      }
+
+      return userFromRaw(result)
+    } catch (err) {
+      return new UnknownRepositoryError(err)
+    }
+  }
+
   const update = async ({
     id,
     phone,
@@ -93,6 +107,7 @@ export const UsersRepository = (): IUsersRepository => {
     findById,
     findByUsername,
     findByWalletPublicId,
+    findByRole,
     update,
   }
 }
@@ -102,6 +117,7 @@ const userFromRaw = (result: UserType): User => {
     id: result.id as UserId,
     username: result.username as Username,
     walletPublicId: result.walletPublicId as WalletPublicId,
+    role: result.role as UserRole,
     phone: result.phone as PhoneNumber,
     language: result.language as UserLanguage,
     twoFA: result.twoFA as TwoFAForUser,
