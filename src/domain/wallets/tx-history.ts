@@ -99,38 +99,120 @@ export const fromLedger = (
         },
       }
 
-      if (isOnChainTransaction(type)) {
-        return {
-          ...baseTransaction,
-          initiationVia: PaymentInitiationMethod.OnChain,
-          settlementVia:
-            type === LedgerTransactionType.OnchainIntraLedger
-              ? SettlementMethod.IntraLedger
-              : SettlementMethod.OnChain,
-          address,
-          otherPartyUsername: username || null,
-          transactionHash: txHash as OnChainTxHash,
-        }
+      let txType = type
+      if (type == LedgerTransactionType.IntraLedger && paymentHash) {
+        txType = LedgerTransactionType.LnIntraLedger
       }
-      if (paymentHash) {
-        return {
-          ...baseTransaction,
-          initiationVia: PaymentInitiationMethod.Lightning,
-          settlementVia:
-            type === LedgerTransactionType.IntraLedger
-              ? SettlementMethod.IntraLedger
-              : SettlementMethod.Lightning,
-          paymentHash: paymentHash as PaymentHash,
-          pubkey: pubkey as Pubkey,
-          otherPartyUsername: username || null,
-        }
+
+      switch (txType) {
+        case LedgerTransactionType.IntraLedger:
+          return {
+            ...baseTransaction,
+            initiationVia: {
+              type: PaymentInitiationMethod.IntraLedger,
+              walletId: walletId,
+              counterPartyUsername: username || null,
+            },
+            settlementVia: {
+              type: SettlementMethod.IntraLedger,
+              walletId: walletId,
+              counterPartyUsername: username || null,
+            },
+          }
+
+        case LedgerTransactionType.OnchainIntraLedger:
+          return {
+            ...baseTransaction,
+            initiationVia: {
+              type: PaymentInitiationMethod.OnChain,
+              address,
+            },
+            settlementVia: {
+              type: SettlementMethod.IntraLedger,
+              walletId: walletId,
+              counterPartyUsername: username || null,
+            },
+          }
+
+        case LedgerTransactionType.OnchainPayment:
+        case LedgerTransactionType.OnchainReceipt:
+          return {
+            ...baseTransaction,
+            initiationVia: {
+              type: PaymentInitiationMethod.OnChain,
+              address,
+            },
+            settlementVia: {
+              type: SettlementMethod.OnChain,
+              transactionHash: txHash,
+            },
+          }
+
+        case LedgerTransactionType.LnIntraLedger:
+          return {
+            ...baseTransaction,
+            initiationVia: {
+              type: PaymentInitiationMethod.Lightning,
+              paymentRequest,
+              paymentHash,
+              pubkey,
+            },
+            settlementVia: {
+              type: SettlementMethod.IntraLedger,
+              walletId: walletId,
+              counterPartyUsername: username || null,
+            },
+          }
+
+        case LedgerTransactionType.Payment:
+        case LedgerTransactionType.Invoice:
+          return {
+            ...baseTransaction,
+            initiationVia: {
+              type: PaymentInitiationMethod.Lightning,
+              paymentRequest,
+              paymentHash,
+              pubkey,
+            },
+            settlementVia: {
+              type: SettlementMethod.Lightning,
+              paymentSecret,
+            },
+          }
       }
-      return {
-        ...baseTransaction,
-        initiationVia: PaymentInitiationMethod.IntraLedger,
-        settlementVia: SettlementMethod.IntraLedger,
-        otherPartyUsername: username || null,
-      }
+
+      // if (isOnChainTransaction(type)) {
+      //   return {
+      //     ...baseTransaction,
+      //     initiationVia: PaymentInitiationMethod.OnChain,
+      //     settlementVia:
+      //       type === LedgerTransactionType.OnchainIntraLedger
+      //         ? SettlementMethod.IntraLedger
+      //         : SettlementMethod.OnChain,
+      //     address,
+      //     otherPartyUsername: username || null,
+      //     transactionHash: txHash as OnChainTxHash,
+      //   }
+      // }
+      // if (paymentHash) {
+      //   return {
+      //     ...baseTransaction,
+      //     initiationVia: PaymentInitiationMethod.Lightning,
+      //     settlementVia:
+      //       type === LedgerTransactionType.IntraLedger
+      //         ? SettlementMethod.IntraLedger
+      //         : SettlementMethod.Lightning,
+      //     paymentHash: paymentHash as PaymentHash,
+      //     pubkey: pubkey as Pubkey,
+      //     otherPartyUsername: username || null,
+      //   }
+      // }
+      // return {
+      //   ...baseTransaction,
+      //   initiationVia: PaymentInitiationMethod.IntraLedger,
+      //   settlementVia: SettlementMethod.IntraLedger,
+      //   otherPartyUsername: username || null,
+      // }
     },
   )
 
